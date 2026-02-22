@@ -1,0 +1,29 @@
+{
+  "expo": {
+    "name": "Dementia Assistant",
+    "slug": "dementia-assistant",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#F7FAF8"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#F7FAF8"
+      }
+    },
+    "web": {
+      "bundler": "metro"
+    }
+  }
+}
