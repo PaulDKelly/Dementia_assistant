@@ -1,66 +1,210 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, SafeAreaView, StyleSheet, Text, View } from "react-native";
-import BottomTabs, { TABS } from "./src/components/BottomTabs";
+import {
+  ActivityIndicator,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import AuthScreen from "./src/auth/AuthScreen";
+import { clearDemoSession, loadDemoSession, saveDemoSession } from "./src/auth/sessionStorage";
+import BottomTabs from "./src/components/BottomTabs";
 import { initialFamilyUpdates, initialMedications, initialSchedule } from "./src/data/seed";
+import { fetchInitialData, fetchProfile, logMedicationTaken, postFamilyUpdate } from "./src/lib/repository";
+import { isSupabaseConfigured, supabase } from "./src/lib/supabase";
+import AdminScreen from "./src/screens/AdminScreen";
 import FamilyScreen from "./src/screens/FamilyScreen";
 import HomeScreen from "./src/screens/HomeScreen";
 import MedicationScreen from "./src/screens/MedicationScreen";
 import TalkScreen from "./src/screens/TalkScreen";
 import TodayScreen from "./src/screens/TodayScreen";
-import { loadAppState, saveAppState } from "./src/storage/appState";
+import { clearAppState, loadAppState, saveAppState } from "./src/storage/appState";
 import { colors } from "./src/theme/colors";
 import { nowLabel } from "./src/utils/time";
 
+const ROLE_TABS = {
+  elder: ["Home", "Today", "Talk"],
+  caregiver: ["Home", "Today", "Medication", "Family", "Talk"],
+  admin: ["Home", "Today", "Medication", "Family", "Talk", "Admin"],
+};
+
+function defaultState() {
+  return {
+    schedule: initialSchedule,
+    medications: initialMedications,
+    familyUpdates: initialFamilyUpdates,
+    lastTalkMessage: "No message sent yet",
+    mood: "Calm",
+  };
+}
+
+function toTitleCase(value) {
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
 export default function App() {
   const [activeTab, setActiveTab] = useState("Home");
+
   const [schedule, setSchedule] = useState(initialSchedule);
   const [medications, setMedications] = useState(initialMedications);
   const [familyUpdates, setFamilyUpdates] = useState(initialFamilyUpdates);
   const [lastTalkMessage, setLastTalkMessage] = useState("No message sent yet");
   const [mood, setMood] = useState("Calm");
-  const [isHydrating, setIsHydrating] = useState(true);
+
+  const [authMode, setAuthMode] = useState(null);
+  const [session, setSession] = useState(null);
+  const [profile, setProfile] = useState(null);
+  const [elderId, setElderId] = useState(null);
+
+  const [authReady, setAuthReady] = useState(false);
+  const [authLoading, setAuthLoading] = useState(false);
+  const [isDataLoading, setIsDataLoading] = useState(true);
+
+  const role = profile?.role || "caregiver";
+  const tabs = ROLE_TABS[role] || ROLE_TABS.caregiver;
+  const isAuthenticated = Boolean(session && profile);
+  const scopeKey = elderId ? `${authMode}:${elderId}` : `${authMode}:anonymous`;
 
   useEffect(() => {
+    if (!tabs.includes(activeTab)) setActiveTab("Home");
+  }, [tabs, activeTab]);
+
+  useEffect(() => {
+    let unsubscribe = null;
     let isMounted = true;
 
-    const hydrate = async () => {
-      const persisted = await loadAppState();
-      if (!isMounted || !persisted) {
-        setIsHydrating(false);
-        return;
+    const bootstrapAuth = async () => {
+      if (isSupabaseConfigured) {
+        const { data } = await supabase.auth.getSession();
+        if (!isMounted) return;
+        if (data.session) {
+          setSession(data.session);
+          setAuthMode("supabase");
+        }
+
+        const authListener = supabase.auth.onAuthStateChange((_event, nextSession) => {
+          setSession(nextSession);
+          setAuthMode(nextSession ? "supabase" : null);
+          if (!nextSession) {
+            setProfile(null);
+            setElderId(null);
+          }
+        });
+        unsubscribe = () => authListener.data.subscription.unsubscribe();
+      } else {
+        const demoSession = await loadDemoSession();
+        if (!isMounted) return;
+
+        if (demoSession) {
+          setAuthMode("demo");
+          setSession({ user: { id: demoSession.userId } });
+          setProfile({
+            id: demoSession.userId,
+            role: demoSession.role,
+            full_name: demoSession.fullName,
+          });
+          setElderId(demoSession.elderId);
+        }
       }
 
-      if (Array.isArray(persisted.schedule)) setSchedule(persisted.schedule);
-      if (Array.isArray(persisted.medications)) setMedications(persisted.medications);
-      if (Array.isArray(persisted.familyUpdates)) setFamilyUpdates(persisted.familyUpdates);
-      if (typeof persisted.lastTalkMessage === "string") setLastTalkMessage(persisted.lastTalkMessage);
-      if (typeof persisted.mood === "string") setMood(persisted.mood);
-      setIsHydrating(false);
+      setAuthReady(true);
     };
 
-    hydrate();
+    bootstrapAuth();
 
     return () => {
       isMounted = false;
+      if (unsubscribe) unsubscribe();
     };
   }, []);
 
   useEffect(() => {
-    if (isHydrating) return;
+    let isMounted = true;
+
+    const loadProfile = async () => {
+      if (!authReady || authMode !== "supabase" || !session?.user?.id) return;
+      setIsDataLoading(true);
+      const nextProfile = await fetchProfile(session.user.id);
+      if (!isMounted) return;
+      setProfile(nextProfile);
+      setElderId(nextProfile.id);
+    };
+
+    loadProfile();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [authReady, authMode, session?.user?.id]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadData = async () => {
+      if (!authReady || !isAuthenticated || !elderId) return;
+
+      setIsDataLoading(true);
+      const persisted = await loadAppState();
+      if (!isMounted) return;
+
+      if (persisted && persisted.scopeKey === scopeKey) {
+        if (Array.isArray(persisted.schedule)) setSchedule(persisted.schedule);
+        if (Array.isArray(persisted.medications)) setMedications(persisted.medications);
+        if (Array.isArray(persisted.familyUpdates)) setFamilyUpdates(persisted.familyUpdates);
+        if (typeof persisted.lastTalkMessage === "string") setLastTalkMessage(persisted.lastTalkMessage);
+        if (typeof persisted.mood === "string") setMood(persisted.mood);
+      } else {
+        const defaults = defaultState();
+        setSchedule(defaults.schedule);
+        setMedications(defaults.medications);
+        setFamilyUpdates(defaults.familyUpdates);
+        setLastTalkMessage(defaults.lastTalkMessage);
+        setMood(defaults.mood);
+      }
+
+      const remote = await fetchInitialData(elderId);
+      if (!isMounted) return;
+
+      if (remote?.schedule) setSchedule(remote.schedule);
+      if (remote?.medications) setMedications(remote.medications);
+      if (remote?.familyUpdates) setFamilyUpdates(remote.familyUpdates);
+      setIsDataLoading(false);
+    };
+
+    loadData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [authReady, isAuthenticated, elderId, scopeKey]);
+
+  useEffect(() => {
+    if (!authReady || !isAuthenticated || isDataLoading) return;
 
     saveAppState({
+      scopeKey,
       schedule,
       medications,
       familyUpdates,
       lastTalkMessage,
       mood,
     });
-  }, [schedule, medications, familyUpdates, lastTalkMessage, mood, isHydrating]);
+  }, [
+    authReady,
+    isAuthenticated,
+    isDataLoading,
+    scopeKey,
+    schedule,
+    medications,
+    familyUpdates,
+    lastTalkMessage,
+    mood,
+  ]);
 
   const completedEvents = schedule.filter((item) => item.done).length;
   const medicationTakenCount = medications.filter((item) => item.taken).length;
   const urgentMedications = medications.filter((item) => !item.taken).length;
-
   const nextEvent = useMemo(
     () => schedule.find((item) => !item.done) || schedule[schedule.length - 1] || null,
     [schedule]
@@ -72,7 +216,10 @@ export default function App() {
     );
   };
 
-  const toggleMedicationTaken = (id) => {
+  const toggleMedicationTaken = async (id) => {
+    const target = medications.find((item) => item.id === id);
+    const markTaken = target ? !target.taken : false;
+
     setMedications((current) =>
       current.map((item) =>
         item.id === id
@@ -84,22 +231,81 @@ export default function App() {
           : item
       )
     );
+
+    if (markTaken && elderId && session?.user?.id) {
+      await logMedicationTaken({
+        medicationId: id,
+        elderId,
+        userId: session.user.id,
+      });
+    }
   };
 
-  const addFamilyUpdate = (message) => {
-    setFamilyUpdates((current) => [
-      {
-        id: String(Date.now()),
-        message,
-        author: "Caregiver",
-        timestamp: nowLabel(),
-      },
-      ...current,
-    ]);
+  const addFamilyUpdate = async (message) => {
+    const saved = await postFamilyUpdate({
+      elderId,
+      userId: session?.user?.id,
+      message,
+    });
+
+    setFamilyUpdates((current) => [saved, ...current]);
   };
 
   const sendTalkMessage = (message) => {
     setLastTalkMessage(`${message} (${nowLabel()})`);
+  };
+
+  const resetLocalData = async () => {
+    await clearAppState();
+    const defaults = defaultState();
+    setSchedule(defaults.schedule);
+    setMedications(defaults.medications);
+    setFamilyUpdates(defaults.familyUpdates);
+    setLastTalkMessage(defaults.lastTalkMessage);
+    setMood(defaults.mood);
+  };
+
+  const handleDemoLogin = async (selectedRole) => {
+    const userId = `demo-${selectedRole}`;
+    const demoSession = {
+      userId,
+      role: selectedRole,
+      fullName: `Demo ${toTitleCase(selectedRole)}`,
+      elderId: selectedRole === "elder" ? userId : "demo-elder-1",
+    };
+
+    await saveDemoSession(demoSession);
+    setAuthMode("demo");
+    setSession({ user: { id: demoSession.userId } });
+    setProfile({
+      id: demoSession.userId,
+      role: demoSession.role,
+      full_name: demoSession.fullName,
+    });
+    setElderId(demoSession.elderId);
+    setActiveTab("Home");
+  };
+
+  const handleSupabaseLogin = async (email, password) => {
+    if (!isSupabaseConfigured) return { ok: false, error: "Supabase is not configured." };
+    setAuthLoading(true);
+
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    setAuthLoading(false);
+    if (error) return { ok: false, error: error.message };
+    return { ok: true };
+  };
+
+  const logout = async () => {
+    if (authMode === "supabase" && isSupabaseConfigured) {
+      await supabase.auth.signOut();
+    }
+    await clearDemoSession();
+    setSession(null);
+    setProfile(null);
+    setElderId(null);
+    setAuthMode(null);
+    setActiveTab("Home");
   };
 
   const renderScreen = () => {
@@ -119,7 +325,9 @@ export default function App() {
     }
 
     if (activeTab === "Today") {
-      return <TodayScreen schedule={schedule} onToggleDone={toggleEventDone} setMood={setMood} mood={mood} />;
+      return (
+        <TodayScreen schedule={schedule} onToggleDone={toggleEventDone} setMood={setMood} mood={mood} />
+      );
     }
 
     if (activeTab === "Medication") {
@@ -136,10 +344,37 @@ export default function App() {
       return <FamilyScreen updates={familyUpdates} onAddUpdate={addFamilyUpdate} />;
     }
 
+    if (activeTab === "Admin") {
+      return <AdminScreen profile={profile} onResetLocalData={resetLocalData} />;
+    }
+
     return <TalkScreen onSendMessage={sendTalkMessage} lastTalkMessage={lastTalkMessage} />;
   };
 
-  if (isHydrating) {
+  if (!authReady) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingState}>
+          <ActivityIndicator size="large" color={colors.accent} />
+          <Text style={styles.loadingText}>Starting app...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <AuthScreen
+          onDemoLogin={handleDemoLogin}
+          onSupabaseLogin={handleSupabaseLogin}
+          loading={authLoading}
+        />
+      </SafeAreaView>
+    );
+  }
+
+  if (isDataLoading) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
@@ -157,13 +392,20 @@ export default function App() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Dementia Assistant</Text>
-        <Text style={styles.subtitle}>Care plan for today, simplified</Text>
+        <View>
+          <Text style={styles.title}>Dementia Assistant</Text>
+          <Text style={styles.subtitle}>
+            {profile?.full_name || "User"} ({role})
+          </Text>
+        </View>
+        <TouchableOpacity onPress={logout} style={styles.logoutButton}>
+          <Text style={styles.logoutLabel}>Sign out</Text>
+        </TouchableOpacity>
       </View>
 
       <View style={styles.content}>{renderScreen()}</View>
 
-      <BottomTabs tabs={TABS} activeTab={activeTab} onSelect={setActiveTab} />
+      <BottomTabs tabs={tabs} activeTab={activeTab} onSelect={setActiveTab} />
     </SafeAreaView>
   );
 }
@@ -180,16 +422,33 @@ const styles = StyleSheet.create({
     backgroundColor: colors.headerBackground,
     borderBottomWidth: 1,
     borderBottomColor: colors.borderSoft,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   title: {
-    fontSize: 30,
+    fontSize: 28,
     fontWeight: "700",
     color: colors.textPrimary,
   },
   subtitle: {
     marginTop: 4,
-    fontSize: 16,
+    fontSize: 15,
     color: colors.textSecondary,
+    textTransform: "capitalize",
+  },
+  logoutButton: {
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: "#FFFFFF",
+  },
+  logoutLabel: {
+    color: colors.textPrimary,
+    fontWeight: "600",
+    fontSize: 13,
   },
   content: {
     flex: 1,

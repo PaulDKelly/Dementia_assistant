@@ -2,8 +2,6 @@ import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { colors } from "../theme/colors";
 
-export const TABS = ["Home", "Today", "Medication", "Family", "Talk"];
-
 export default function BottomTabs({ tabs, activeTab, onSelect }) {
   return (
     <View style={styles.tabBar}>

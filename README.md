@@ -1,9 +1,9 @@
-# Dementia Assistant MVP Scaffold
+# Dementia Assistant MVP
 
 This repository contains:
 
 - `backend/supabase/mvp_schema.sql`: initial Supabase schema (roles, calendar, meds, diary, family feed, alerts).
-- `app/`: an Expo React Native skeleton with large-touch UI and 5 primary screens.
+- `app/`: an Expo React Native app with role-based auth flow and caregiver workflows.
 
 ## App screens (wired)
 
@@ -12,12 +12,14 @@ This repository contains:
 - Medication
 - Family
 - Talk
+- Admin (admin role only)
 
 ## Local setup
 
-1. Install Node.js 18+ and npm.
+1. Install Node.js 18+.
 2. From `app/`, install dependencies:
-   - `npm install`
+   - `corepack yarn install` (recommended)
+   - or `npm install`
 3. Start the app:
    - `npm start`
 
@@ -30,5 +32,23 @@ Optional targets:
 ## Notes
 
 - UI is intentionally minimal and accessibility-focused.
-- The app skeleton is local-state based (no backend binding yet).
+- Local persistence is enabled via AsyncStorage.
+- Supabase integration is supported for auth/profile data, medications, calendar, and family feed.
+- If Supabase env vars are not set, the app runs in demo mode with role quick-start.
 - The SQL schema is designed for Supabase/PostgreSQL and includes row-level-security stubs.
+
+## Supabase configuration (optional)
+
+Set these environment variables before running Expo:
+
+- `EXPO_PUBLIC_SUPABASE_URL`
+- `EXPO_PUBLIC_SUPABASE_ANON_KEY`
+
+PowerShell example:
+
+```powershell
+$env:EXPO_PUBLIC_SUPABASE_URL = "https://YOUR_PROJECT.supabase.co"
+$env:EXPO_PUBLIC_SUPABASE_ANON_KEY = "YOUR_ANON_KEY"
+cd app
+npm start
+```

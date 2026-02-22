@@ -19,3 +19,11 @@ export async function saveAppState(value) {
     // Best-effort persistence: app remains usable even if storage fails.
   }
 }
+
+export async function clearAppState() {
+  try {
+    await AsyncStorage.removeItem(STORAGE_KEY);
+  } catch (error) {
+    // no-op
+  }
+}
