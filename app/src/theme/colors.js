@@ -1,0 +1,15 @@
+export const colors = {
+  appBackground: "#F1F8F4",
+  headerBackground: "#E2F0E8",
+  tabBackground: "#E2F0E8",
+  cardBackground: "#FFFFFF",
+  borderSoft: "#CADFD0",
+  borderCard: "#D3E2DA",
+  textPrimary: "#123524",
+  textSecondary: "#2B5941",
+  textMuted: "#4B5563",
+  accent: "#2F6E4F",
+  accentStrong: "#1F7A4C",
+  warn: "#B45309",
+  success: "#166534",
+};
