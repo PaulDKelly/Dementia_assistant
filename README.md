@@ -52,3 +52,36 @@ $env:EXPO_PUBLIC_SUPABASE_ANON_KEY = "YOUR_ANON_KEY"
 cd app
 npm start
 ```
+
+## Android-first testing (APK)
+
+This project is configured for Android-first builds with EAS.
+
+### One-time setup
+
+1. Install Expo/EAS tooling:
+   - `npm install -g eas-cli`
+2. Log in to Expo:
+   - `eas login`
+3. From `app/`, initialize EAS project metadata (first time only):
+   - `eas init`
+
+### Build an installable APK
+
+From `app/`:
+
+- `npm run build:apk`
+
+When the build completes, EAS provides an APK download link. Install that APK on your Android device for the first proper test pass.
+
+### Build for Play Store later
+
+From `app/`:
+
+- `npm run build:aab`
+
+### Important before release
+
+- Update Android package id in `app/app.json`:
+  - `expo.android.package`
+- Increment `expo.android.versionCode` for each new uploaded release build.

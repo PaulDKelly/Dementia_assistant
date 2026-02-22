@@ -5,13 +5,17 @@
     "version": "0.1.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
+    "scheme": "dementiaassistant",
     "assetBundlePatterns": [
       "**/*"
     ],
     "ios": {
+      "bundleIdentifier": "com.dementiaassistant.app",
       "supportsTablet": true
     },
     "android": {
+      "package": "com.dementiaassistant.app",
+      "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#F7FAF8"
       }
