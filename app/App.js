@@ -11,7 +11,13 @@ import AuthScreen from "./src/auth/AuthScreen";
 import { clearDemoSession, loadDemoSession, saveDemoSession } from "./src/auth/sessionStorage";
 import BottomTabs from "./src/components/BottomTabs";
 import { initialFamilyUpdates, initialMedications, initialSchedule } from "./src/data/seed";
-import { fetchInitialData, fetchProfile, logMedicationTaken, postFamilyUpdate } from "./src/lib/repository";
+import {
+  ensureProfile,
+  fetchInitialData,
+  fetchProfile,
+  logMedicationTaken,
+  postFamilyUpdate,
+} from "./src/lib/repository";
 import { isSupabaseConfigured, supabase } from "./src/lib/supabase";
 import AdminScreen from "./src/screens/AdminScreen";
 import FamilyScreen from "./src/screens/FamilyScreen";
@@ -60,6 +66,9 @@ export default function App() {
   const [authReady, setAuthReady] = useState(false);
   const [authLoading, setAuthLoading] = useState(false);
   const [isDataLoading, setIsDataLoading] = useState(true);
+  const [authError, setAuthError] = useState("");
+  const [dataError, setDataError] = useState("");
+  const [reloadToken, setReloadToken] = useState(0);
 
   const role = profile?.role || "caregiver";
   const tabs = ROLE_TABS[role] || ROLE_TABS.caregiver;
@@ -125,8 +134,15 @@ export default function App() {
     const loadProfile = async () => {
       if (!authReady || authMode !== "supabase" || !session?.user?.id) return;
       setIsDataLoading(true);
-      const nextProfile = await fetchProfile(session.user.id);
+      setAuthError("");
+
+      const nextProfile = await fetchProfile(session.user.id, session.user.email);
       if (!isMounted) return;
+      if (!nextProfile) {
+        setAuthError("Unable to load profile. Please sign in again.");
+        setIsDataLoading(false);
+        return;
+      }
       setProfile(nextProfile);
       setElderId(nextProfile.id);
     };
@@ -166,6 +182,11 @@ export default function App() {
       const remote = await fetchInitialData(elderId);
       if (!isMounted) return;
 
+      if (!remote) {
+        setDataError("Unable to load remote data. Showing local data.");
+      } else {
+        setDataError("");
+      }
       if (remote?.schedule) setSchedule(remote.schedule);
       if (remote?.medications) setMedications(remote.medications);
       if (remote?.familyUpdates) setFamilyUpdates(remote.familyUpdates);
@@ -177,7 +198,7 @@ export default function App() {
     return () => {
       isMounted = false;
     };
-  }, [authReady, isAuthenticated, elderId, scopeKey]);
+  }, [authReady, isAuthenticated, elderId, scopeKey, reloadToken]);
 
   useEffect(() => {
     if (!authReady || !isAuthenticated || isDataLoading) return;
@@ -286,13 +307,58 @@ export default function App() {
     setActiveTab("Home");
   };
 
-  const handleSupabaseLogin = async (email, password) => {
+  const handleSupabaseLogin = async (email, password, options) => {
     if (!isSupabaseConfigured) return { ok: false, error: "Supabase is not configured." };
     setAuthLoading(true);
+    setAuthError("");
+    setDataError("");
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (options?.mode === "signup") {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+      });
+      if (error) {
+        setAuthLoading(false);
+        return { ok: false, error: error.message };
+      }
+
+      if (data?.user) {
+        const profileResult = await ensureProfile({
+          userId: data.user.id,
+          email: data.user.email,
+          role: options.role || "caregiver",
+          fullName: data.user.email ? data.user.email.split("@")[0] : "User",
+        });
+
+        if (!profileResult.ok) {
+          setAuthLoading(false);
+          return { ok: false, error: profileResult.error };
+        }
+      }
+
+      setAuthLoading(false);
+      if (!data.session) {
+        return { ok: true, notice: "Account created. Check your email to verify before signing in." };
+      }
+      return { ok: true };
+    }
+
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     setAuthLoading(false);
     if (error) return { ok: false, error: error.message };
+
+    if (data?.user) {
+      const profileResult = await ensureProfile({
+        userId: data.user.id,
+        email: data.user.email,
+        role: "caregiver",
+      });
+      if (!profileResult.ok) {
+        return { ok: false, error: profileResult.error };
+      }
+    }
+
     return { ok: true };
   };
 
@@ -305,6 +371,8 @@ export default function App() {
     setProfile(null);
     setElderId(null);
     setAuthMode(null);
+    setAuthError("");
+    setDataError("");
     setActiveTab("Home");
   };
 
@@ -374,6 +442,20 @@ export default function App() {
     );
   }
 
+  if (authError) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingState}>
+          <Text style={styles.errorTitle}>Authentication Error</Text>
+          <Text style={styles.errorText}>{authError}</Text>
+          <TouchableOpacity onPress={logout} style={styles.retryButton}>
+            <Text style={styles.retryLabel}>Return to Sign In</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   if (isDataLoading) {
     return (
       <SafeAreaView style={styles.container}>
@@ -404,6 +486,14 @@ export default function App() {
       </View>
 
       <View style={styles.content}>{renderScreen()}</View>
+      {dataError ? (
+        <View style={styles.banner}>
+          <Text style={styles.bannerText}>{dataError}</Text>
+          <TouchableOpacity onPress={() => setReloadToken((value) => value + 1)}>
+            <Text style={styles.bannerAction}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      ) : null}
 
       <BottomTabs tabs={tabs} activeTab={activeTab} onSelect={setActiveTab} />
     </SafeAreaView>
@@ -465,5 +555,52 @@ const styles = StyleSheet.create({
     marginTop: 12,
     color: colors.textMuted,
     fontSize: 16,
+  },
+  errorTitle: {
+    fontSize: 24,
+    color: "#991B1B",
+    fontWeight: "700",
+  },
+  errorText: {
+    marginTop: 8,
+    color: colors.textMuted,
+    textAlign: "center",
+    fontSize: 15,
+    marginBottom: 12,
+  },
+  retryButton: {
+    borderRadius: 10,
+    backgroundColor: colors.accent,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  retryLabel: {
+    color: "#FFFFFF",
+    fontWeight: "700",
+  },
+  banner: {
+    position: "absolute",
+    left: 16,
+    right: 16,
+    bottom: 72,
+    borderRadius: 10,
+    backgroundColor: "#FFF1F2",
+    borderWidth: 1,
+    borderColor: "#FBCFE8",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  bannerText: {
+    color: "#9D174D",
+    flex: 1,
+    marginRight: 8,
+    fontSize: 13,
+  },
+  bannerAction: {
+    color: colors.accent,
+    fontWeight: "700",
   },
 });

@@ -30,7 +30,7 @@ function toFamilyRows(feed) {
   }));
 }
 
-export async function fetchProfile(userId) {
+export async function fetchProfile(userId, email) {
   if (!isSupabaseConfigured) {
     return { id: userId, role: "caregiver", full_name: "Demo User" };
   }
@@ -41,8 +41,64 @@ export async function fetchProfile(userId) {
     .eq("id", userId)
     .single();
 
-  if (error) return { id: userId, role: "caregiver", full_name: "User" };
+  if (error) {
+    const created = await ensureProfile({
+      userId,
+      email,
+      role: "caregiver",
+    });
+
+    if (!created.ok) return null;
+    return created.profile;
+  }
   return data;
+}
+
+export async function ensureProfile({ userId, email, role = "caregiver", fullName }) {
+  if (!isSupabaseConfigured) {
+    return {
+      ok: true,
+      profile: {
+        id: userId,
+        role,
+        full_name: fullName || "Demo User",
+      },
+    };
+  }
+
+  const { data: existing, error: fetchError } = await supabase
+    .from("profiles")
+    .select("id, role, full_name")
+    .eq("id", userId)
+    .single();
+
+  if (!fetchError && existing) {
+    return { ok: true, profile: existing };
+  }
+
+  const seedName =
+    fullName ||
+    (email && email.includes("@") ? email.split("@")[0] : "User");
+
+  const { data: inserted, error: insertError } = await supabase
+    .from("profiles")
+    .insert({
+      id: userId,
+      role,
+      full_name: seedName,
+    })
+    .select("id, role, full_name")
+    .single();
+
+  if (insertError) {
+    return {
+      ok: false,
+      error: insertError.message || "Could not create profile.",
+      profile: null,
+    };
+  }
+
+  return { ok: true, profile: inserted };
 }
 
 export async function fetchInitialData(elderId) {
@@ -110,14 +166,14 @@ export async function fetchInitialData(elderId) {
 export async function logMedicationTaken({ medicationId, elderId, userId, note }) {
   if (!isSupabaseConfigured) return true;
 
-  await supabase.from("medication_logs").insert({
+  const { error } = await supabase.from("medication_logs").insert({
     medication_id: medicationId,
     elder_id: elderId,
     logged_by: userId,
     note: note || "Marked as taken from mobile app",
   });
 
-  return true;
+  return !error;
 }
 
 export async function postFamilyUpdate({ elderId, userId, message }) {

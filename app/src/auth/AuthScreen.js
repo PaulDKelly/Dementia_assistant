@@ -8,7 +8,10 @@ const ROLES = ["elder", "caregiver", "admin"];
 export default function AuthScreen({ onDemoLogin, onSupabaseLogin, loading }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [selectedRole, setSelectedRole] = useState("caregiver");
+  const [isCreateMode, setIsCreateMode] = useState(false);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
 
   const login = async () => {
     const trimmed = email.trim().toLowerCase();
@@ -16,9 +19,21 @@ export default function AuthScreen({ onDemoLogin, onSupabaseLogin, loading }) {
       setError("Email and password are required.");
       return;
     }
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters.");
+      return;
+    }
     setError("");
-    const result = await onSupabaseLogin(trimmed, password);
-    if (!result.ok) setError(result.error || "Login failed.");
+    setNotice("");
+    const result = await onSupabaseLogin(trimmed, password, {
+      mode: isCreateMode ? "signup" : "login",
+      role: selectedRole,
+    });
+    if (!result.ok) {
+      setError(result.error || "Login failed.");
+      return;
+    }
+    if (result.notice) setNotice(result.notice);
   };
 
   return (
@@ -29,6 +44,9 @@ export default function AuthScreen({ onDemoLogin, onSupabaseLogin, loading }) {
       {isSupabaseConfigured ? (
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Supabase Login</Text>
+          <Text style={styles.muted}>
+            {isCreateMode ? "Create a new account" : "Sign in to an existing account"}
+          </Text>
           <TextInput
             value={email}
             onChangeText={setEmail}
@@ -46,13 +64,42 @@ export default function AuthScreen({ onDemoLogin, onSupabaseLogin, loading }) {
             secureTextEntry
             placeholderTextColor="#6B7280"
           />
+          {isCreateMode ? (
+            <View style={styles.roleRow}>
+              {ROLES.map((role) => (
+                <TouchableOpacity
+                  key={`auth-${role}`}
+                  onPress={() => setSelectedRole(role)}
+                  style={[styles.roleButton, selectedRole === role && styles.roleButtonActive]}
+                >
+                  <Text style={[styles.roleLabel, selectedRole === role && styles.roleLabelActive]}>
+                    {role}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          ) : null}
           {error ? <Text style={styles.error}>{error}</Text> : null}
+          {notice ? <Text style={styles.notice}>{notice}</Text> : null}
           <TouchableOpacity onPress={login} style={styles.primaryButton} disabled={loading}>
             {loading ? (
               <ActivityIndicator color="#FFFFFF" />
             ) : (
-              <Text style={styles.primaryButtonLabel}>Sign In</Text>
+              <Text style={styles.primaryButtonLabel}>{isCreateMode ? "Create Account" : "Sign In"}</Text>
             )}
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => {
+              setIsCreateMode((value) => !value);
+              setError("");
+              setNotice("");
+            }}
+            style={styles.switchModeButton}
+            disabled={loading}
+          >
+            <Text style={styles.switchModeLabel}>
+              {isCreateMode ? "Have an account? Sign in" : "Need an account? Create one"}
+            </Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -151,13 +198,34 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
     paddingHorizontal: 12,
   },
+  roleButtonActive: {
+    backgroundColor: colors.accent,
+    borderColor: colors.accent,
+  },
   roleLabel: {
     color: colors.textPrimary,
     fontWeight: "600",
     textTransform: "capitalize",
   },
+  roleLabelActive: {
+    color: "#FFFFFF",
+  },
   error: {
     color: "#991B1B",
+    marginBottom: 6,
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  switchModeButton: {
+    marginTop: 10,
+    alignItems: "center",
+  },
+  switchModeLabel: {
+    color: colors.accent,
+    fontWeight: "600",
+  },
+  notice: {
+    color: "#065F46",
     marginBottom: 6,
     fontSize: 14,
     fontWeight: "600",

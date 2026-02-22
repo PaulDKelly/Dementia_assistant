@@ -86,6 +86,12 @@ create policy "profiles_self_update"
   using (auth.uid() = id)
   with check (auth.uid() = id);
 
+drop policy if exists "profiles_self_insert" on public.profiles;
+create policy "profiles_self_insert"
+  on public.profiles for insert
+  to authenticated
+  with check (auth.uid() = id);
+
 drop policy if exists "calendar_authenticated_all" on public.calendar_events;
 create policy "calendar_authenticated_all"
   on public.calendar_events for all
