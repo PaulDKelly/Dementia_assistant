@@ -29,6 +29,7 @@ import {
   removePasswordEntry,
 } from "./src/lib/repository";
 import { isSupabaseConfigured, supabase } from "./src/lib/supabase";
+import { speakText } from "./src/lib/voice";
 import AdminScreen from "./src/screens/AdminScreen";
 import CompanionDashboardScreen from "./src/screens/CompanionDashboardScreen";
 import FamilyScreen from "./src/screens/FamilyScreen";
@@ -341,8 +342,14 @@ export default function App() {
     setFamilyUpdates((current) => [saved, ...current]);
   };
 
-  const sendTalkMessage = (message) => {
-    setLastTalkMessage(`${message} (${nowLabel()})`);
+  const sendTalkMessage = (message, options = {}) => {
+    if (options.speakOnly) {
+      speakText(message);
+      return;
+    }
+    const enriched = `${message} (${nowLabel()})`;
+    setLastTalkMessage(enriched);
+    speakText(message);
   };
 
   const readCompanionReminders = () => {
@@ -357,6 +364,7 @@ export default function App() {
     ].join(" ");
 
     setLastTalkMessage(`${reminderText} (${nowLabel()})`);
+    speakText(reminderText);
   };
 
   const resetLocalData = async () => {

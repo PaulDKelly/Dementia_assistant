@@ -37,6 +37,15 @@ export default function TalkScreen({ onSendMessage, lastTalkMessage }) {
         </TouchableOpacity>
       ))}
 
+      <TouchableOpacity
+        onPress={() => onSendMessage(lastTalkMessage, { speakOnly: true })}
+        style={styles.listenBackButton}
+        accessibilityRole="button"
+        accessibilityLabel="Speak last message aloud"
+      >
+        <Text style={styles.listenBackLabel}>Speak last message</Text>
+      </TouchableOpacity>
+
       <View style={styles.emergencyPanel}>
         <Text style={styles.emergencyTitle}>Emergency</Text>
         <TouchableOpacity
@@ -79,6 +88,20 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#FECACA",
     borderRadius: 12,
+  },
+  listenBackButton: {
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  listenBackLabel: {
+    color: colors.textPrimary,
+    fontWeight: "700",
+    fontSize: 16,
   },
   emergencyTitle: {
     color: "#991B1B",
