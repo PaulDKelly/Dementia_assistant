@@ -23,24 +23,43 @@ export default function CompanionDashboardScreen({
 }) {
   return (
     <ScreenShell title="Companion Dashboard">
-      <View style={styles.heroSplit}>
-        <View style={styles.avatarPane}>
+      <View style={styles.heroStage}>
+        <View style={styles.stageBubbleA} />
+        <View style={styles.stageBubbleB} />
+        <View style={styles.stageBubbleC} />
+
+        <View style={styles.avatarCenter}>
           <CompanionAvatar speaking={speaking} />
           <Text style={styles.avatarHint}>{speaking ? "Speaking..." : "Ready to chat"}</Text>
         </View>
 
-        <View style={styles.summaryPane}>
-          <Text style={styles.greeting}>Hi {profileName || "there"}.</Text>
-          <Text style={styles.helper}>
-            Mood: {mood}. Next up: {nextEvent ? `${nextEvent.time} - ${nextEvent.title}` : "No events today"}.
-          </Text>
+        <TouchableOpacity onPress={onTalkPress} style={[styles.cloudButton, styles.cloudTalk]}>
+          <Text style={styles.cloudButtonText}>Talk to me</Text>
+        </TouchableOpacity>
 
-          <TouchableOpacity onPress={onTalkPress} style={styles.primaryAction}>
-            <Text style={styles.actionLabel}>Talk to me</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={onReadReminders} style={styles.secondaryAction}>
-            <Text style={styles.secondaryLabel}>Read reminders</Text>
-          </TouchableOpacity>
+        <TouchableOpacity onPress={onReadReminders} style={[styles.cloudButton, styles.cloudReminder]}>
+          <Text style={styles.cloudButtonText}>Read reminders</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity onPress={onOpenMoments} style={[styles.cloudButton, styles.cloudMoments]}>
+          <Text style={styles.cloudButtonText}>Family moments</Text>
+        </TouchableOpacity>
+
+        <View style={[styles.infoCloud, styles.infoMood]}>
+          <Text style={styles.infoLabel}>Mood</Text>
+          <Text style={styles.infoValue}>{mood}</Text>
+        </View>
+
+        <View style={[styles.infoCloud, styles.infoNext]}>
+          <Text style={styles.infoLabel}>Next</Text>
+          <Text style={styles.infoValue} numberOfLines={2}>
+            {nextEvent ? `${nextEvent.time} ${nextEvent.title}` : "No events today"}
+          </Text>
+        </View>
+
+        <View style={[styles.infoCloud, styles.infoMeds]}>
+          <Text style={styles.infoLabel}>Meds</Text>
+          <Text style={styles.infoValue}>{pendingMeds} pending</Text>
         </View>
       </View>
 
@@ -69,11 +88,6 @@ export default function CompanionDashboardScreen({
             <Text style={styles.timelineText}>{item.title}</Text>
           </View>
         ))}
-        {pendingMeds > 0 ? (
-          <Text style={styles.pendingText}>{pendingMeds} medication item(s) still pending.</Text>
-        ) : (
-          <Text style={styles.doneText}>All medications marked as logged today.</Text>
-        )}
       </View>
 
       <View style={styles.card}>
@@ -100,27 +114,49 @@ export default function CompanionDashboardScreen({
 }
 
 const styles = StyleSheet.create({
-  heroSplit: {
-    backgroundColor: "#FFFDFB",
+  heroStage: {
+    height: 380,
+    borderRadius: 24,
+    backgroundColor: "#FFF8F4",
+    borderWidth: 1,
     borderColor: "#F4D8CF",
-    borderWidth: 1,
-    borderRadius: 18,
-    padding: 12,
-    marginBottom: 10,
-    flexDirection: "row",
-    alignItems: "stretch",
+    marginBottom: 12,
+    position: "relative",
+    overflow: "hidden",
   },
-  avatarPane: {
-    width: "48%",
-    borderRadius: 14,
-    backgroundColor: "#FFEFF6",
-    borderWidth: 1,
-    borderColor: "#F4D5E1",
-    paddingVertical: 10,
-    paddingHorizontal: 6,
+  stageBubbleA: {
+    position: "absolute",
+    width: 190,
+    height: 190,
+    borderRadius: 95,
+    backgroundColor: "#FFE4F0",
+    left: -40,
+    top: -35,
+  },
+  stageBubbleB: {
+    position: "absolute",
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: "#E6F8F2",
+    right: -20,
+    top: 35,
+  },
+  stageBubbleC: {
+    position: "absolute",
+    width: 180,
+    height: 180,
+    borderRadius: 90,
+    backgroundColor: "#FFF1D9",
+    right: -45,
+    bottom: -55,
+  },
+  avatarCenter: {
+    position: "absolute",
+    left: "29%",
+    right: "29%",
+    top: 88,
     alignItems: "center",
-    justifyContent: "center",
-    marginRight: 10,
   },
   avatarHint: {
     marginTop: 8,
@@ -128,46 +164,75 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     fontSize: 13,
   },
-  summaryPane: {
-    width: "48%",
-    justifyContent: "space-between",
-  },
-  greeting: {
-    color: colors.textPrimary,
-    fontSize: 24,
-    fontWeight: "800",
-    marginBottom: 4,
-  },
-  helper: {
-    color: colors.textMuted,
-    fontSize: 15,
-    lineHeight: 22,
-    marginBottom: 8,
-  },
-  primaryAction: {
-    borderRadius: 14,
-    backgroundColor: colors.accent,
-    paddingVertical: 13,
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  secondaryAction: {
-    borderRadius: 14,
-    backgroundColor: "#F4FFFC",
+  cloudButton: {
+    position: "absolute",
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     borderWidth: 1,
-    borderColor: colors.borderSoft,
-    paddingVertical: 12,
-    alignItems: "center",
+    borderColor: "#E8C9D5",
+    backgroundColor: "#FFFFFF",
+    shadowColor: "#D9B3A7",
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
   },
-  actionLabel: {
-    color: "#FFFFFF",
-    fontWeight: "700",
-    fontSize: 16,
+  cloudTalk: {
+    left: 14,
+    top: 112,
+    backgroundColor: "#F8D3E1",
   },
-  secondaryLabel: {
+  cloudReminder: {
+    right: 12,
+    top: 116,
+    backgroundColor: "#D9F4ED",
+  },
+  cloudMoments: {
+    left: 24,
+    bottom: 28,
+    backgroundColor: "#FBE9D2",
+  },
+  cloudButtonText: {
     color: colors.textPrimary,
+    fontWeight: "800",
+    fontSize: 13,
+  },
+  infoCloud: {
+    position: "absolute",
+    minWidth: 90,
+    maxWidth: 140,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: "#E9CEC4",
+    backgroundColor: "rgba(255,255,255,0.92)",
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  infoMood: {
+    left: 12,
+    top: 30,
+  },
+  infoNext: {
+    right: 10,
+    top: 24,
+  },
+  infoMeds: {
+    right: 22,
+    bottom: 42,
+  },
+  infoLabel: {
+    color: colors.textMuted,
+    fontSize: 11,
     fontWeight: "700",
-    fontSize: 16,
+    marginBottom: 2,
+    textTransform: "uppercase",
+  },
+  infoValue: {
+    color: colors.textPrimary,
+    fontSize: 13,
+    fontWeight: "700",
+    lineHeight: 18,
   },
   card: {
     backgroundColor: "#FFFDFB",
@@ -228,16 +293,6 @@ const styles = StyleSheet.create({
   timelineText: {
     color: colors.textPrimary,
     fontSize: 15,
-  },
-  pendingText: {
-    marginTop: 8,
-    color: "#B45309",
-    fontWeight: "700",
-  },
-  doneText: {
-    marginTop: 8,
-    color: colors.success,
-    fontWeight: "700",
   },
   photoRow: {
     flexDirection: "row",
