@@ -1,5 +1,6 @@
 import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import CompanionAvatar from "../components/CompanionAvatar";
 import ScreenShell from "../components/ScreenShell";
 import { colors } from "../theme/colors";
 
@@ -15,33 +16,32 @@ export default function CompanionDashboardScreen({
   notifications,
   moments,
   schedule,
+  speaking,
   onTalkPress,
   onReadReminders,
   onOpenMoments,
 }) {
   return (
     <ScreenShell title="Companion Dashboard">
-      <View style={styles.avatarCard}>
-        <View style={styles.glowBubbleA} />
-        <View style={styles.glowBubbleB} />
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>A</Text>
+      <View style={styles.heroSplit}>
+        <View style={styles.avatarPane}>
+          <CompanionAvatar speaking={speaking} />
+          <Text style={styles.avatarHint}>{speaking ? "Speaking..." : "Ready to chat"}</Text>
         </View>
-        <View style={styles.avatarBody}>
-          <Text style={styles.greeting}>Hi {profileName || "there"}, I am your companion.</Text>
+
+        <View style={styles.summaryPane}>
+          <Text style={styles.greeting}>Hi {profileName || "there"}.</Text>
           <Text style={styles.helper}>
             Mood: {mood}. Next up: {nextEvent ? `${nextEvent.time} - ${nextEvent.title}` : "No events today"}.
           </Text>
-        </View>
-      </View>
 
-      <View style={styles.actionsRow}>
-        <TouchableOpacity onPress={onTalkPress} style={styles.primaryAction}>
-          <Text style={styles.actionLabel}>Talk to me</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={onReadReminders} style={styles.secondaryAction}>
-          <Text style={styles.secondaryLabel}>Read reminders</Text>
-        </TouchableOpacity>
+          <TouchableOpacity onPress={onTalkPress} style={styles.primaryAction}>
+            <Text style={styles.actionLabel}>Talk to me</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={onReadReminders} style={styles.secondaryAction}>
+            <Text style={styles.secondaryLabel}>Read reminders</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <View style={styles.card}>
@@ -100,79 +100,58 @@ export default function CompanionDashboardScreen({
 }
 
 const styles = StyleSheet.create({
-  avatarCard: {
+  heroSplit: {
     backgroundColor: "#FFFDFB",
     borderColor: "#F4D8CF",
     borderWidth: 1,
     borderRadius: 18,
-    padding: 14,
+    padding: 12,
     marginBottom: 10,
     flexDirection: "row",
-    alignItems: "center",
-    overflow: "hidden",
+    alignItems: "stretch",
   },
-  glowBubbleA: {
-    position: "absolute",
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: "#FFE4F0",
-    right: -28,
-    top: -42,
-  },
-  glowBubbleB: {
-    position: "absolute",
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    backgroundColor: "#DDF6EE",
-    right: 24,
-    bottom: -20,
-  },
-  avatar: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: "#FFF0F7",
+  avatarPane: {
+    width: "48%",
+    borderRadius: 14,
+    backgroundColor: "#FFEFF6",
+    borderWidth: 1,
+    borderColor: "#F4D5E1",
+    paddingVertical: 10,
+    paddingHorizontal: 6,
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 12,
-    borderWidth: 1,
-    borderColor: colors.borderSoft,
+    marginRight: 10,
   },
-  avatarText: {
-    color: colors.accent,
-    fontWeight: "800",
-    fontSize: 30,
+  avatarHint: {
+    marginTop: 8,
+    color: colors.textSecondary,
+    fontWeight: "700",
+    fontSize: 13,
   },
-  avatarBody: {
-    flex: 1,
+  summaryPane: {
+    width: "48%",
+    justifyContent: "space-between",
   },
   greeting: {
     color: colors.textPrimary,
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: "800",
     marginBottom: 4,
   },
   helper: {
     color: colors.textMuted,
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  actionsRow: {
-    flexDirection: "row",
-    marginBottom: 10,
+    fontSize: 15,
+    lineHeight: 22,
+    marginBottom: 8,
   },
   primaryAction: {
-    flex: 1,
     borderRadius: 14,
     backgroundColor: colors.accent,
     paddingVertical: 13,
     alignItems: "center",
-    marginRight: 8,
+    marginBottom: 8,
   },
   secondaryAction: {
-    flex: 1,
     borderRadius: 14,
     backgroundColor: "#F4FFFC",
     borderWidth: 1,

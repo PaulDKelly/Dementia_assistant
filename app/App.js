@@ -77,6 +77,7 @@ export default function App() {
   const [familyUpdates, setFamilyUpdates] = useState(initialFamilyUpdates);
   const [lastTalkMessage, setLastTalkMessage] = useState("No message sent yet");
   const [mood, setMood] = useState("Calm");
+  const [isCompanionSpeaking, setIsCompanionSpeaking] = useState(false);
   const [passwordEntries, setPasswordEntries] = useState(initialPasswordEntries);
   const [vaultPin, setVaultPin] = useState("2580");
   const [vaultUnlocked, setVaultUnlocked] = useState(false);
@@ -343,13 +344,22 @@ export default function App() {
   };
 
   const sendTalkMessage = (message, options = {}) => {
+    const speakWithAvatar = (text) => {
+      setIsCompanionSpeaking(true);
+      speakText(text, {
+        onDone: () => setIsCompanionSpeaking(false),
+        onStopped: () => setIsCompanionSpeaking(false),
+        onError: () => setIsCompanionSpeaking(false),
+      });
+    };
+
     if (options.speakOnly) {
-      speakText(message);
+      speakWithAvatar(message);
       return;
     }
     const enriched = `${message} (${nowLabel()})`;
     setLastTalkMessage(enriched);
-    speakText(message);
+    speakWithAvatar(message);
   };
 
   const readCompanionReminders = () => {
@@ -364,7 +374,12 @@ export default function App() {
     ].join(" ");
 
     setLastTalkMessage(`${reminderText} (${nowLabel()})`);
-    speakText(reminderText);
+    setIsCompanionSpeaking(true);
+    speakText(reminderText, {
+      onDone: () => setIsCompanionSpeaking(false),
+      onStopped: () => setIsCompanionSpeaking(false),
+      onError: () => setIsCompanionSpeaking(false),
+    });
   };
 
   const resetLocalData = async () => {
@@ -519,6 +534,7 @@ export default function App() {
             notifications={dashboardNotifications}
             moments={familyMoments}
             schedule={schedule}
+            speaking={isCompanionSpeaking}
             onTalkPress={() => setActiveTab("Talk")}
             onReadReminders={readCompanionReminders}
             onOpenMoments={() => setActiveTab("Moments")}
