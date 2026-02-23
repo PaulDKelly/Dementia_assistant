@@ -26,3 +26,41 @@ export const initialFamilyUpdates = [
     timestamp: "02:24 PM",
   },
 ];
+
+export const initialPasswordEntries = [
+  {
+    id: "p1",
+    label: "Email Account",
+    username: "elder@example.com",
+    secret: "garden-bird-204",
+    note: "Primary inbox",
+    updatedAt: "09:10 AM",
+  },
+  {
+    id: "p2",
+    label: "Online Banking",
+    username: "elder.bank.user",
+    secret: "safe-river-889",
+    note: "Use with caregiver support",
+    updatedAt: "09:20 AM",
+  },
+];
+
+export const initialFamilyMoments = [
+  {
+    id: "mom-1",
+    type: "photo",
+    mediaUrl: "https://images.unsplash.com/photo-1511895426328-dc8714191300",
+    caption: "Morning walk with granddad.",
+    author: "Paul",
+    createdAt: "08:42 AM",
+  },
+  {
+    id: "mom-2",
+    type: "video",
+    mediaUrl: "https://www.w3schools.com/html/mov_bbb.mp4",
+    caption: "Birthday song from the family.",
+    author: "Emma",
+    createdAt: "07:15 PM",
+  },
+];

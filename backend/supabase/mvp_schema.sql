@@ -64,6 +64,27 @@ create table if not exists public.alerts (
   resolved_at timestamptz
 );
 
+create table if not exists public.password_entries (
+  id uuid primary key default gen_random_uuid(),
+  elder_id uuid not null references public.profiles(id) on delete cascade,
+  label text not null,
+  username text not null,
+  secret text not null,
+  note text,
+  created_by uuid references public.profiles(id),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.family_moments (
+  id uuid primary key default gen_random_uuid(),
+  elder_id uuid not null references public.profiles(id) on delete cascade,
+  author_id uuid references public.profiles(id),
+  media_type text not null check (media_type in ('photo', 'video')),
+  media_url text not null,
+  caption text not null,
+  created_at timestamptz not null default now()
+);
+
 alter table public.profiles enable row level security;
 alter table public.calendar_events enable row level security;
 alter table public.medications enable row level security;
@@ -71,6 +92,8 @@ alter table public.medication_logs enable row level security;
 alter table public.diary_entries enable row level security;
 alter table public.family_feed enable row level security;
 alter table public.alerts enable row level security;
+alter table public.password_entries enable row level security;
+alter table public.family_moments enable row level security;
 
 -- RLS stubs for MVP. Tighten with role-aware policies before production.
 drop policy if exists "profiles_authenticated_read" on public.profiles;
@@ -130,6 +153,20 @@ create policy "family_feed_authenticated_all"
 drop policy if exists "alerts_authenticated_all" on public.alerts;
 create policy "alerts_authenticated_all"
   on public.alerts for all
+  to authenticated
+  using (true)
+  with check (true);
+
+drop policy if exists "password_entries_authenticated_all" on public.password_entries;
+create policy "password_entries_authenticated_all"
+  on public.password_entries for all
+  to authenticated
+  using (true)
+  with check (true);
+
+drop policy if exists "family_moments_authenticated_all" on public.family_moments;
+create policy "family_moments_authenticated_all"
+  on public.family_moments for all
   to authenticated
   using (true)
   with check (true);

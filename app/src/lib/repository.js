@@ -1,4 +1,10 @@
-import { initialFamilyUpdates, initialMedications, initialSchedule } from "../data/seed";
+import {
+  initialFamilyMoments,
+  initialFamilyUpdates,
+  initialMedications,
+  initialPasswordEntries,
+  initialSchedule,
+} from "../data/seed";
 import { nowLabel } from "../utils/time";
 import { isSupabaseConfigured, supabase } from "./supabase";
 
@@ -113,8 +119,14 @@ export async function fetchInitialData(elderId) {
   const dayStart = new Date();
   dayStart.setHours(0, 0, 0, 0);
 
-  const [{ data: calendarEvents }, { data: medicationRows }, { data: logsRows }, { data: familyRows }] =
-    await Promise.all([
+  const [
+    { data: calendarEvents },
+    { data: medicationRows },
+    { data: logsRows },
+    { data: familyRows },
+    { data: passwordRows },
+    { data: momentRows },
+  ] = await Promise.all([
       supabase
         .from("calendar_events")
         .select("id, title, starts_at")
@@ -133,6 +145,17 @@ export async function fetchInitialData(elderId) {
       supabase
         .from("family_feed")
         .select("id, message, created_at")
+        .eq("elder_id", elderId)
+        .order("created_at", { ascending: false })
+        .limit(50),
+      supabase
+        .from("password_entries")
+        .select("id, label, username, secret, note, updated_at")
+        .eq("elder_id", elderId)
+        .order("updated_at", { ascending: false }),
+      supabase
+        .from("family_moments")
+        .select("id, media_type, media_url, caption, created_at")
         .eq("elder_id", elderId)
         .order("created_at", { ascending: false })
         .limit(50),
@@ -160,6 +183,34 @@ export async function fetchInitialData(elderId) {
     schedule: calendarEvents?.length ? toScheduleRows(calendarEvents) : initialSchedule,
     medications: medicationWithLogs.length ? medicationWithLogs : initialMedications,
     familyUpdates: familyRows?.length ? toFamilyRows(familyRows) : initialFamilyUpdates,
+    passwordEntries:
+      passwordRows?.length
+        ? passwordRows.map((item) => ({
+            id: item.id,
+            label: item.label,
+            username: item.username,
+            secret: item.secret,
+            note: item.note || "",
+            updatedAt: new Date(item.updated_at).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            }),
+          }))
+        : initialPasswordEntries,
+    familyMoments:
+      momentRows?.length
+        ? momentRows.map((item) => ({
+            id: item.id,
+            type: item.media_type,
+            mediaUrl: item.media_url,
+            caption: item.caption,
+            author: "Family",
+            createdAt: new Date(item.created_at).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            }),
+          }))
+        : initialFamilyMoments,
   };
 }
 
@@ -210,5 +261,102 @@ export async function postFamilyUpdate({ elderId, userId, message }) {
     message: data.message,
     author: "Caregiver",
     timestamp: new Date(data.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+  };
+}
+
+export async function createPasswordEntry({ elderId, userId, entry }) {
+  if (!isSupabaseConfigured) {
+    return {
+      id: String(Date.now()),
+      label: entry.label,
+      username: entry.username,
+      secret: entry.secret,
+      note: entry.note || "",
+      updatedAt: nowLabel(),
+    };
+  }
+
+  const { data, error } = await supabase
+    .from("password_entries")
+    .insert({
+      elder_id: elderId,
+      label: entry.label,
+      username: entry.username,
+      secret: entry.secret,
+      note: entry.note || "",
+      created_by: userId,
+    })
+    .select("id, label, username, secret, note, updated_at")
+    .single();
+
+  if (error || !data) {
+    return {
+      id: String(Date.now()),
+      label: entry.label,
+      username: entry.username,
+      secret: entry.secret,
+      note: entry.note || "",
+      updatedAt: nowLabel(),
+    };
+  }
+
+  return {
+    id: data.id,
+    label: data.label,
+    username: data.username,
+    secret: data.secret,
+    note: data.note || "",
+    updatedAt: new Date(data.updated_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+  };
+}
+
+export async function removePasswordEntry(entryId) {
+  if (!isSupabaseConfigured) return true;
+  const { error } = await supabase.from("password_entries").delete().eq("id", entryId);
+  return !error;
+}
+
+export async function createFamilyMoment({ elderId, userId, moment }) {
+  if (!isSupabaseConfigured) {
+    return {
+      id: String(Date.now()),
+      type: moment.type,
+      mediaUrl: moment.mediaUrl,
+      caption: moment.caption,
+      author: "Caregiver",
+      createdAt: nowLabel(),
+    };
+  }
+
+  const { data, error } = await supabase
+    .from("family_moments")
+    .insert({
+      elder_id: elderId,
+      author_id: userId,
+      media_type: moment.type,
+      media_url: moment.mediaUrl,
+      caption: moment.caption,
+    })
+    .select("id, media_type, media_url, caption, created_at")
+    .single();
+
+  if (error || !data) {
+    return {
+      id: String(Date.now()),
+      type: moment.type,
+      mediaUrl: moment.mediaUrl,
+      caption: moment.caption,
+      author: "Caregiver",
+      createdAt: nowLabel(),
+    };
+  }
+
+  return {
+    id: data.id,
+    type: data.media_type,
+    mediaUrl: data.media_url,
+    caption: data.caption,
+    author: "Caregiver",
+    createdAt: new Date(data.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
   };
 }

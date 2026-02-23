@@ -11,19 +11,30 @@ import AuthScreen from "./src/auth/AuthScreen";
 import { clearDemoSession, loadDemoSession, saveDemoSession } from "./src/auth/sessionStorage";
 import BottomTabs from "./src/components/BottomTabs";
 import { createQaChecklist } from "./src/data/qaChecklist";
-import { initialFamilyUpdates, initialMedications, initialSchedule } from "./src/data/seed";
 import {
+  initialFamilyMoments,
+  initialFamilyUpdates,
+  initialMedications,
+  initialPasswordEntries,
+  initialSchedule,
+} from "./src/data/seed";
+import {
+  createFamilyMoment,
+  createPasswordEntry,
   ensureProfile,
   fetchInitialData,
   fetchProfile,
   logMedicationTaken,
   postFamilyUpdate,
+  removePasswordEntry,
 } from "./src/lib/repository";
 import { isSupabaseConfigured, supabase } from "./src/lib/supabase";
 import AdminScreen from "./src/screens/AdminScreen";
 import FamilyScreen from "./src/screens/FamilyScreen";
+import FamilyMomentsScreen from "./src/screens/FamilyMomentsScreen";
 import HomeScreen from "./src/screens/HomeScreen";
 import MedicationScreen from "./src/screens/MedicationScreen";
+import PasswordHubScreen from "./src/screens/PasswordHubScreen";
 import QAScreen from "./src/screens/QAScreen";
 import TalkScreen from "./src/screens/TalkScreen";
 import TodayScreen from "./src/screens/TodayScreen";
@@ -32,9 +43,9 @@ import { colors } from "./src/theme/colors";
 import { nowLabel } from "./src/utils/time";
 
 const ROLE_TABS = {
-  elder: ["Home", "Today", "Talk"],
-  caregiver: ["Home", "Today", "Medication", "Family", "Talk", "QA"],
-  admin: ["Home", "Today", "Medication", "Family", "Talk", "QA", "Admin"],
+  elder: ["Home", "Today", "Passwords", "Moments", "Talk"],
+  caregiver: ["Home", "Today", "Medication", "Family", "Passwords", "Moments", "Talk", "QA"],
+  admin: ["Home", "Today", "Medication", "Family", "Passwords", "Moments", "Talk", "QA", "Admin"],
 };
 
 function defaultState() {
@@ -44,6 +55,9 @@ function defaultState() {
     familyUpdates: initialFamilyUpdates,
     lastTalkMessage: "No message sent yet",
     mood: "Calm",
+    passwordEntries: initialPasswordEntries,
+    vaultPin: "2580",
+    familyMoments: initialFamilyMoments,
     qaChecklist: createQaChecklist(),
     qaNotes: "",
   };
@@ -61,6 +75,10 @@ export default function App() {
   const [familyUpdates, setFamilyUpdates] = useState(initialFamilyUpdates);
   const [lastTalkMessage, setLastTalkMessage] = useState("No message sent yet");
   const [mood, setMood] = useState("Calm");
+  const [passwordEntries, setPasswordEntries] = useState(initialPasswordEntries);
+  const [vaultPin, setVaultPin] = useState("2580");
+  const [vaultUnlocked, setVaultUnlocked] = useState(false);
+  const [familyMoments, setFamilyMoments] = useState(initialFamilyMoments);
   const [qaChecklist, setQaChecklist] = useState(createQaChecklist());
   const [qaNotes, setQaNotes] = useState("");
 
@@ -84,6 +102,12 @@ export default function App() {
   useEffect(() => {
     if (!tabs.includes(activeTab)) setActiveTab("Home");
   }, [tabs, activeTab]);
+
+  useEffect(() => {
+    if (activeTab !== "Passwords" && vaultUnlocked) {
+      setVaultUnlocked(false);
+    }
+  }, [activeTab, vaultUnlocked]);
 
   useEffect(() => {
     let unsubscribe = null;
@@ -176,6 +200,9 @@ export default function App() {
         if (Array.isArray(persisted.familyUpdates)) setFamilyUpdates(persisted.familyUpdates);
         if (typeof persisted.lastTalkMessage === "string") setLastTalkMessage(persisted.lastTalkMessage);
         if (typeof persisted.mood === "string") setMood(persisted.mood);
+        if (Array.isArray(persisted.passwordEntries)) setPasswordEntries(persisted.passwordEntries);
+        if (typeof persisted.vaultPin === "string") setVaultPin(persisted.vaultPin);
+        if (Array.isArray(persisted.familyMoments)) setFamilyMoments(persisted.familyMoments);
         if (Array.isArray(persisted.qaChecklist)) setQaChecklist(persisted.qaChecklist);
         if (typeof persisted.qaNotes === "string") setQaNotes(persisted.qaNotes);
       } else {
@@ -185,6 +212,9 @@ export default function App() {
         setFamilyUpdates(defaults.familyUpdates);
         setLastTalkMessage(defaults.lastTalkMessage);
         setMood(defaults.mood);
+        setPasswordEntries(defaults.passwordEntries);
+        setVaultPin(defaults.vaultPin);
+        setFamilyMoments(defaults.familyMoments);
         setQaChecklist(defaults.qaChecklist);
         setQaNotes(defaults.qaNotes);
       }
@@ -200,6 +230,8 @@ export default function App() {
       if (remote?.schedule) setSchedule(remote.schedule);
       if (remote?.medications) setMedications(remote.medications);
       if (remote?.familyUpdates) setFamilyUpdates(remote.familyUpdates);
+      if (remote?.passwordEntries) setPasswordEntries(remote.passwordEntries);
+      if (remote?.familyMoments) setFamilyMoments(remote.familyMoments);
       setIsDataLoading(false);
     };
 
@@ -220,6 +252,9 @@ export default function App() {
       familyUpdates,
       lastTalkMessage,
       mood,
+      passwordEntries,
+      vaultPin,
+      familyMoments,
       qaChecklist,
       qaNotes,
     });
@@ -233,6 +268,9 @@ export default function App() {
     familyUpdates,
     lastTalkMessage,
     mood,
+    passwordEntries,
+    vaultPin,
+    familyMoments,
     qaChecklist,
     qaNotes,
   ]);
@@ -298,8 +336,35 @@ export default function App() {
     setFamilyUpdates(defaults.familyUpdates);
     setLastTalkMessage(defaults.lastTalkMessage);
     setMood(defaults.mood);
+    setPasswordEntries(defaults.passwordEntries);
+    setVaultPin(defaults.vaultPin);
+    setFamilyMoments(defaults.familyMoments);
+    setVaultUnlocked(false);
     setQaChecklist(defaults.qaChecklist);
     setQaNotes(defaults.qaNotes);
+  };
+
+  const addPasswordEntry = async (entry) => {
+    const saved = await createPasswordEntry({
+      elderId,
+      userId: session?.user?.id,
+      entry,
+    });
+    setPasswordEntries((current) => [saved, ...current]);
+  };
+
+  const deletePasswordEntry = async (id) => {
+    await removePasswordEntry(id);
+    setPasswordEntries((current) => current.filter((entry) => entry.id !== id));
+  };
+
+  const addFamilyMoment = async (moment) => {
+    const saved = await createFamilyMoment({
+      elderId,
+      userId: session?.user?.id,
+      moment,
+    });
+    setFamilyMoments((current) => [saved, ...current]);
   };
 
   const toggleQaItem = (id) => {
@@ -441,6 +506,26 @@ export default function App() {
 
     if (activeTab === "Admin") {
       return <AdminScreen profile={profile} onResetLocalData={resetLocalData} />;
+    }
+
+    if (activeTab === "Passwords") {
+      return (
+        <PasswordHubScreen
+          role={role}
+          entries={passwordEntries}
+          vaultPin={vaultPin}
+          onUnlock={() => setVaultUnlocked(true)}
+          unlocked={vaultUnlocked}
+          onLock={() => setVaultUnlocked(false)}
+          onUpdatePin={setVaultPin}
+          onAddEntry={addPasswordEntry}
+          onDeleteEntry={deletePasswordEntry}
+        />
+      );
+    }
+
+    if (activeTab === "Moments") {
+      return <FamilyMomentsScreen role={role} moments={familyMoments} onAddMoment={addFamilyMoment} />;
     }
 
     if (activeTab === "QA") {

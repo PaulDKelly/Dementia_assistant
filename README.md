@@ -11,6 +11,8 @@ This repository contains:
 - Today
 - Medication
 - Family
+- Passwords
+- Moments
 - Talk
 - QA (caregiver/admin only)
 - Admin (admin role only)
