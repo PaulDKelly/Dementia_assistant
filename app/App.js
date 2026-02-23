@@ -30,6 +30,7 @@ import {
 } from "./src/lib/repository";
 import { isSupabaseConfigured, supabase } from "./src/lib/supabase";
 import AdminScreen from "./src/screens/AdminScreen";
+import CompanionDashboardScreen from "./src/screens/CompanionDashboardScreen";
 import FamilyScreen from "./src/screens/FamilyScreen";
 import FamilyMomentsScreen from "./src/screens/FamilyMomentsScreen";
 import HomeScreen from "./src/screens/HomeScreen";
@@ -282,6 +283,22 @@ export default function App() {
     () => schedule.find((item) => !item.done) || schedule[schedule.length - 1] || null,
     [schedule]
   );
+  const dashboardNotifications = useMemo(() => {
+    const items = [];
+    if (urgentMedications > 0) {
+      items.push({ id: "n-med", message: `${urgentMedications} medication reminder(s) pending` });
+    }
+    if (nextEvent) {
+      items.push({ id: "n-next", message: `Next event: ${nextEvent.time} - ${nextEvent.title}` });
+    }
+    if (familyMoments.length > 0) {
+      items.push({
+        id: "n-photo",
+        message: `${familyMoments.length} family moment(s) available`,
+      });
+    }
+    return items;
+  }, [urgentMedications, nextEvent, familyMoments.length]);
 
   const toggleEventDone = (id) => {
     setSchedule((current) =>
@@ -326,6 +343,20 @@ export default function App() {
 
   const sendTalkMessage = (message) => {
     setLastTalkMessage(`${message} (${nowLabel()})`);
+  };
+
+  const readCompanionReminders = () => {
+    const reminderText = [
+      nextEvent ? `Next event is ${nextEvent.title} at ${nextEvent.time}.` : "No events are scheduled.",
+      urgentMedications > 0
+        ? `${urgentMedications} medication reminder(s) are still pending.`
+        : "All medications are logged.",
+      familyMoments.length > 0
+        ? `You have ${familyMoments.length} family moment updates.`
+        : "No new family moments yet.",
+    ].join(" ");
+
+    setLastTalkMessage(`${reminderText} (${nowLabel()})`);
   };
 
   const resetLocalData = async () => {
@@ -470,6 +501,23 @@ export default function App() {
 
   const renderScreen = () => {
     if (activeTab === "Home") {
+      if (role === "elder") {
+        return (
+          <CompanionDashboardScreen
+            profileName={profile?.full_name}
+            mood={mood}
+            nextEvent={nextEvent}
+            pendingMeds={urgentMedications}
+            notifications={dashboardNotifications}
+            moments={familyMoments}
+            schedule={schedule}
+            onTalkPress={() => setActiveTab("Talk")}
+            onReadReminders={readCompanionReminders}
+            onOpenMoments={() => setActiveTab("Moments")}
+          />
+        );
+      }
+
       return (
         <HomeScreen
           mood={mood}

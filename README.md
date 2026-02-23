@@ -8,6 +8,7 @@ This repository contains:
 ## App screens (wired)
 
 - Home
+- Companion Dashboard (elder Home experience)
 - Today
 - Medication
 - Family
