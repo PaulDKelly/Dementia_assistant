@@ -92,10 +92,10 @@ export default function FamilyMomentsScreen({ role, moments, onAddMoment }) {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: "#FFFFFF",
-    borderColor: colors.borderCard,
+    backgroundColor: "#FFFDFB",
+    borderColor: "#F1D7CE",
     borderWidth: 1,
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 12,
     marginBottom: 10,
   },
@@ -116,11 +116,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     marginRight: 8,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#FFFEFD",
   },
   typeButtonActive: {
-    backgroundColor: colors.accent,
-    borderColor: colors.accent,
+    backgroundColor: "#F9BDD0",
+    borderColor: "#F09BB7",
   },
   typeButtonLabel: {
     color: colors.textPrimary,
@@ -133,7 +133,7 @@ const styles = StyleSheet.create({
   input: {
     borderColor: colors.borderSoft,
     borderWidth: 1,
-    borderRadius: 10,
+    borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 10,
     marginBottom: 8,
@@ -146,7 +146,7 @@ const styles = StyleSheet.create({
   },
   primaryButton: {
     backgroundColor: colors.accent,
-    borderRadius: 10,
+    borderRadius: 12,
     alignItems: "center",
     paddingVertical: 11,
   },

@@ -13,12 +13,13 @@ export default function ScreenShell({ title, children }) {
 
 const styles = StyleSheet.create({
   content: {
-    paddingBottom: 48,
+    paddingBottom: 66,
   },
   title: {
-    fontSize: 26,
-    fontWeight: "700",
+    fontSize: 30,
+    fontWeight: "800",
     color: colors.textPrimary,
-    marginBottom: 12,
+    marginBottom: 14,
+    letterSpacing: 0.25,
   },
 });

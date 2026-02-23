@@ -22,6 +22,8 @@ export default function CompanionDashboardScreen({
   return (
     <ScreenShell title="Companion Dashboard">
       <View style={styles.avatarCard}>
+        <View style={styles.glowBubbleA} />
+        <View style={styles.glowBubbleB} />
         <View style={styles.avatar}>
           <Text style={styles.avatarText}>A</Text>
         </View>
@@ -50,8 +52,9 @@ export default function CompanionDashboardScreen({
         {notifications.length === 0 ? (
           <Text style={styles.emptyText}>No alerts right now.</Text>
         ) : (
-          notifications.map((item) => (
+          notifications.map((item, idx) => (
             <View key={item.id} style={styles.notificationRow}>
+              <View style={[styles.dot, idx % 2 ? styles.dotAlt : null]} />
               <Text style={styles.notificationText}>{item.message}</Text>
             </View>
           ))
@@ -98,20 +101,39 @@ export default function CompanionDashboardScreen({
 
 const styles = StyleSheet.create({
   avatarCard: {
-    backgroundColor: "#FFFFFF",
-    borderColor: colors.borderCard,
+    backgroundColor: "#FFFDFB",
+    borderColor: "#F4D8CF",
     borderWidth: 1,
-    borderRadius: 12,
-    padding: 12,
+    borderRadius: 18,
+    padding: 14,
     marginBottom: 10,
     flexDirection: "row",
     alignItems: "center",
+    overflow: "hidden",
+  },
+  glowBubbleA: {
+    position: "absolute",
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: "#FFE4F0",
+    right: -28,
+    top: -42,
+  },
+  glowBubbleB: {
+    position: "absolute",
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: "#DDF6EE",
+    right: 24,
+    bottom: -20,
   },
   avatar: {
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: "#E8F5ED",
+    backgroundColor: "#FFF0F7",
     alignItems: "center",
     justifyContent: "center",
     marginRight: 12,
@@ -128,8 +150,8 @@ const styles = StyleSheet.create({
   },
   greeting: {
     color: colors.textPrimary,
-    fontSize: 18,
-    fontWeight: "700",
+    fontSize: 20,
+    fontWeight: "800",
     marginBottom: 4,
   },
   helper: {
@@ -143,16 +165,16 @@ const styles = StyleSheet.create({
   },
   primaryAction: {
     flex: 1,
-    borderRadius: 10,
+    borderRadius: 14,
     backgroundColor: colors.accent,
-    paddingVertical: 12,
+    paddingVertical: 13,
     alignItems: "center",
     marginRight: 8,
   },
   secondaryAction: {
     flex: 1,
-    borderRadius: 10,
-    backgroundColor: "#FFFFFF",
+    borderRadius: 14,
+    backgroundColor: "#F4FFFC",
     borderWidth: 1,
     borderColor: colors.borderSoft,
     paddingVertical: 12,
@@ -169,10 +191,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   card: {
-    backgroundColor: "#FFFFFF",
-    borderColor: colors.borderCard,
+    backgroundColor: "#FFFDFB",
+    borderColor: "#F1D7CE",
     borderWidth: 1,
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 12,
     marginBottom: 10,
   },
@@ -193,13 +215,26 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   notificationRow: {
+    flexDirection: "row",
+    alignItems: "center",
     paddingVertical: 8,
     borderTopWidth: 1,
-    borderTopColor: "#EEF3F0",
+    borderTopColor: "#F5E7E1",
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.accent,
+    marginRight: 8,
+  },
+  dotAlt: {
+    backgroundColor: colors.accentAlt,
   },
   notificationText: {
     color: colors.textPrimary,
     fontSize: 15,
+    flex: 1,
   },
   timelineRow: {
     flexDirection: "row",
@@ -232,11 +267,11 @@ const styles = StyleSheet.create({
   photoTile: {
     flex: 1,
     minHeight: 84,
-    borderRadius: 10,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: colors.borderSoft,
+    borderColor: "#EBCFC6",
     padding: 8,
-    backgroundColor: "#F8FBF9",
+    backgroundColor: "#FFF8F5",
   },
   photoType: {
     color: colors.accent,

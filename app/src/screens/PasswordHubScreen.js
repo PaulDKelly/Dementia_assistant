@@ -121,7 +121,7 @@ export default function PasswordHubScreen({
           <Text style={styles.accountTitle}>{entry.label}</Text>
           <Text style={styles.meta}>Username: {entry.username}</Text>
           <Text style={styles.meta}>
-            Password: {revealed[entry.id] ? entry.secret : "••••••••••"}
+            Password: {revealed[entry.id] ? entry.secret : "**********"}
           </Text>
           {entry.note ? <Text style={styles.note}>{entry.note}</Text> : null}
           <Text style={styles.meta}>Updated: {entry.updatedAt}</Text>
@@ -211,10 +211,10 @@ const styles = StyleSheet.create({
     fontSize: 18,
   },
   card: {
-    backgroundColor: "#FFFFFF",
-    borderColor: colors.borderCard,
+    backgroundColor: "#FFFDFB",
+    borderColor: "#F1D7CE",
     borderWidth: 1,
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 12,
     marginBottom: 10,
   },
@@ -244,12 +244,12 @@ const styles = StyleSheet.create({
   input: {
     borderColor: colors.borderSoft,
     borderWidth: 1,
-    borderRadius: 10,
+    borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 10,
     marginBottom: 8,
     color: colors.textPrimary,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#FFFEFD",
   },
   actionRow: {
     flexDirection: "row",
@@ -257,21 +257,21 @@ const styles = StyleSheet.create({
   },
   primaryButton: {
     backgroundColor: colors.accent,
-    borderRadius: 10,
+    borderRadius: 12,
     alignItems: "center",
     paddingVertical: 11,
   },
   primaryButtonSmall: {
     backgroundColor: colors.accent,
-    borderRadius: 10,
+    borderRadius: 12,
     alignItems: "center",
     paddingVertical: 9,
     paddingHorizontal: 12,
     marginRight: 8,
   },
   dangerButtonSmall: {
-    backgroundColor: "#B91C1C",
-    borderRadius: 10,
+    backgroundColor: "#D56A8F",
+    borderRadius: 12,
     alignItems: "center",
     paddingVertical: 9,
     paddingHorizontal: 12,
