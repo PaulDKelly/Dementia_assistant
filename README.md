@@ -12,6 +12,7 @@ This repository contains:
 - Medication
 - Family
 - Talk
+- QA (caregiver/admin only)
 - Admin (admin role only)
 
 ## Local setup

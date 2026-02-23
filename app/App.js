@@ -10,6 +10,7 @@ import {
 import AuthScreen from "./src/auth/AuthScreen";
 import { clearDemoSession, loadDemoSession, saveDemoSession } from "./src/auth/sessionStorage";
 import BottomTabs from "./src/components/BottomTabs";
+import { createQaChecklist } from "./src/data/qaChecklist";
 import { initialFamilyUpdates, initialMedications, initialSchedule } from "./src/data/seed";
 import {
   ensureProfile,
@@ -23,6 +24,7 @@ import AdminScreen from "./src/screens/AdminScreen";
 import FamilyScreen from "./src/screens/FamilyScreen";
 import HomeScreen from "./src/screens/HomeScreen";
 import MedicationScreen from "./src/screens/MedicationScreen";
+import QAScreen from "./src/screens/QAScreen";
 import TalkScreen from "./src/screens/TalkScreen";
 import TodayScreen from "./src/screens/TodayScreen";
 import { clearAppState, loadAppState, saveAppState } from "./src/storage/appState";
@@ -31,8 +33,8 @@ import { nowLabel } from "./src/utils/time";
 
 const ROLE_TABS = {
   elder: ["Home", "Today", "Talk"],
-  caregiver: ["Home", "Today", "Medication", "Family", "Talk"],
-  admin: ["Home", "Today", "Medication", "Family", "Talk", "Admin"],
+  caregiver: ["Home", "Today", "Medication", "Family", "Talk", "QA"],
+  admin: ["Home", "Today", "Medication", "Family", "Talk", "QA", "Admin"],
 };
 
 function defaultState() {
@@ -42,6 +44,8 @@ function defaultState() {
     familyUpdates: initialFamilyUpdates,
     lastTalkMessage: "No message sent yet",
     mood: "Calm",
+    qaChecklist: createQaChecklist(),
+    qaNotes: "",
   };
 }
 
@@ -57,6 +61,8 @@ export default function App() {
   const [familyUpdates, setFamilyUpdates] = useState(initialFamilyUpdates);
   const [lastTalkMessage, setLastTalkMessage] = useState("No message sent yet");
   const [mood, setMood] = useState("Calm");
+  const [qaChecklist, setQaChecklist] = useState(createQaChecklist());
+  const [qaNotes, setQaNotes] = useState("");
 
   const [authMode, setAuthMode] = useState(null);
   const [session, setSession] = useState(null);
@@ -170,6 +176,8 @@ export default function App() {
         if (Array.isArray(persisted.familyUpdates)) setFamilyUpdates(persisted.familyUpdates);
         if (typeof persisted.lastTalkMessage === "string") setLastTalkMessage(persisted.lastTalkMessage);
         if (typeof persisted.mood === "string") setMood(persisted.mood);
+        if (Array.isArray(persisted.qaChecklist)) setQaChecklist(persisted.qaChecklist);
+        if (typeof persisted.qaNotes === "string") setQaNotes(persisted.qaNotes);
       } else {
         const defaults = defaultState();
         setSchedule(defaults.schedule);
@@ -177,6 +185,8 @@ export default function App() {
         setFamilyUpdates(defaults.familyUpdates);
         setLastTalkMessage(defaults.lastTalkMessage);
         setMood(defaults.mood);
+        setQaChecklist(defaults.qaChecklist);
+        setQaNotes(defaults.qaNotes);
       }
 
       const remote = await fetchInitialData(elderId);
@@ -210,6 +220,8 @@ export default function App() {
       familyUpdates,
       lastTalkMessage,
       mood,
+      qaChecklist,
+      qaNotes,
     });
   }, [
     authReady,
@@ -221,6 +233,8 @@ export default function App() {
     familyUpdates,
     lastTalkMessage,
     mood,
+    qaChecklist,
+    qaNotes,
   ]);
 
   const completedEvents = schedule.filter((item) => item.done).length;
@@ -284,6 +298,19 @@ export default function App() {
     setFamilyUpdates(defaults.familyUpdates);
     setLastTalkMessage(defaults.lastTalkMessage);
     setMood(defaults.mood);
+    setQaChecklist(defaults.qaChecklist);
+    setQaNotes(defaults.qaNotes);
+  };
+
+  const toggleQaItem = (id) => {
+    setQaChecklist((current) =>
+      current.map((item) => (item.id === id ? { ...item, done: !item.done } : item))
+    );
+  };
+
+  const resetQaChecklist = () => {
+    setQaChecklist(createQaChecklist());
+    setQaNotes("");
   };
 
   const handleDemoLogin = async (selectedRole) => {
@@ -414,6 +441,18 @@ export default function App() {
 
     if (activeTab === "Admin") {
       return <AdminScreen profile={profile} onResetLocalData={resetLocalData} />;
+    }
+
+    if (activeTab === "QA") {
+      return (
+        <QAScreen
+          checklist={qaChecklist}
+          notes={qaNotes}
+          onToggleItem={toggleQaItem}
+          onChangeNotes={setQaNotes}
+          onResetChecklist={resetQaChecklist}
+        />
+      );
     }
 
     return <TalkScreen onSendMessage={sendTalkMessage} lastTalkMessage={lastTalkMessage} />;
