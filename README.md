@@ -53,6 +53,8 @@ cd app
 npm start
 ```
 
+You can copy `app/.env.example` to `.env` and fill your values before launching.
+
 ## Android-first testing (APK)
 
 This project is configured for Android-first builds with EAS.
@@ -73,6 +75,10 @@ From `app/`:
 - `npm run build:apk`
 
 When the build completes, EAS provides an APK download link. Install that APK on your Android device for the first proper test pass.
+
+Optional local APK build (requires local Android toolchain):
+
+- `npm run build:apk:local`
 
 ### Build for Play Store later
 

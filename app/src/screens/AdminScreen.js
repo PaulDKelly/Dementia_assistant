@@ -1,15 +1,25 @@
 import React from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import Constants from "expo-constants";
+import { Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import InfoCard from "../components/InfoCard";
 import ScreenShell from "../components/ScreenShell";
 import { colors } from "../theme/colors";
 
 export default function AdminScreen({ profile, onResetLocalData }) {
+  const appVersion = Constants.expoConfig?.version || "unknown";
+  const androidVersionCode = Constants.expoConfig?.android?.versionCode || "n/a";
+  const releaseChannel =
+    Constants.expoConfig?.extra?.eas?.projectId ? "EAS managed build" : "local/dev";
+
   return (
     <ScreenShell title="Admin">
       <InfoCard label="Signed in as" value={profile?.full_name || "Administrator"} />
       <InfoCard label="Role" value={profile?.role || "admin"} />
       <InfoCard label="Environment" value="MVP mode" />
+      <InfoCard label="Platform" value={Platform.OS} />
+      <InfoCard label="App version" value={String(appVersion)} />
+      <InfoCard label="Android versionCode" value={String(androidVersionCode)} />
+      <InfoCard label="Build context" value={releaseChannel} />
 
       <View style={styles.panel}>
         <Text style={styles.panelTitle}>Maintenance</Text>
